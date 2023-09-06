@@ -5,3 +5,20 @@ members = [
     "tokio-boring",
     "hyper-boring"
 ]
+
+[patch.crates-io]
+# This patch is needed as `cmake-rs` automatically sets:
+# ```
+# -DCMAKE_C_FLAGS= -ffunction-sections -fdata-sections -fPIC --target=wasm32-wasi
+# ```
+# which leads to:
+# ```
+#    Could NOT find Threads (missing: Threads_FOUND)
+#  Call Stack (most recent call first):
+#    /usr/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake:600 (_FPHSA_FAILURE_MESSAGE)
+#    /usr/share/cmake-3.25/Modules/FindThreads.cmake:228 (FIND_PACKAGE_HANDLE_STANDARD_ARGS)
+#    crypto/CMakeLists.txt:339 (find_package)
+#
+# ```
+# Without the `CMAKE_C_FLAGS` there is no such error.
+cmake = { path = "/home/vmx/src/rust/cmake-rs" }

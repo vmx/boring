@@ -281,6 +281,21 @@ fn get_boringssl_cmake_config() -> cmake::Config {
                 }
             },
 
+            "wasi" => {
+                // Error looks like https://github.com/WebAssembly/wasi-sdk/issues/179
+                boringssl_cmake.define(
+                    "CMAKE_TOOLCHAIN_FILE",
+                    "/opt/wasi-sdk/share/cmake/wasi-sdk-pthread.cmake",
+                );
+                boringssl_cmake.define("WASI_SDK_PREFIX", "/opt/wasi-sdk/");
+                boringssl_cmake.define("CMAKE_C_COMPILER_FORCED", "true");
+                // TODO vmx 2023-09-04: Those have to go into the boringssl `CMakeLists.txt`, I
+                // currently don't see any other way.
+                //add_definitions(-DOPENSSL_NO_SOCK)
+                //add_definitions(-DOPENSSL_NO_FILESYSTEM)
+                //add_definitions(-DOPENSSL_NO_POSIX_IO)
+            }
+
             _ => {}
         }
     }
@@ -420,6 +435,14 @@ fn get_extra_clang_args_for_bindgen() -> Vec<String> {
                     .expect("Android NDK toolchain path isn't valid UTF-8; this is unsupported"),
             );
         }
+        "wasi" => {
+            let sysroot = "/opt/wasi-sdk/share/wasi-sysroot".to_string();
+            params.push("--sysroot".to_string());
+            params.push(sysroot);
+            params.push("-target".to_string());
+            params.push("wasm32-wasi".to_string());
+            params.push("-fvisibility=default".to_string());
+        }
         _ => {}
     }
 
@@ -469,7 +492,7 @@ fn main() {
     });
 
     let build_path = get_boringssl_platform_output_path();
-    if cfg!(feature = "fips") {
+    //if cfg!(feature = "fips") {
         println!(
             "cargo:rustc-link-search=native={}/build/crypto/{}",
             bssl_dir, build_path
@@ -478,12 +501,12 @@ fn main() {
             "cargo:rustc-link-search=native={}/build/ssl/{}",
             bssl_dir, build_path
         );
-    } else {
-        println!(
-            "cargo:rustc-link-search=native={}/build/{}",
-            bssl_dir, build_path
-        );
-    }
+    //} else {
+    //    println!(
+    //        "cargo:rustc-link-search=native={}/build/{}",
+    //        bssl_dir, build_path
+    //    );
+    //}
 
     println!("cargo:rustc-link-lib=static=crypto");
     if cfg!(feature = "ssl") {
@@ -498,11 +521,11 @@ fn main() {
 
     println!("cargo:rerun-if-env-changed=BORING_BSSL_INCLUDE_PATH");
     let include_path = std::env::var("BORING_BSSL_INCLUDE_PATH").unwrap_or_else(|_| {
-        if cfg!(feature = "fips") {
+        //if cfg!(feature = "fips") {
             format!("{}/include", BORING_SSL_PATH)
-        } else {
-            format!("{}/src/include", BORING_SSL_PATH)
-        }
+        //} else {
+        //    format!("{}/src/include", BORING_SSL_PATH)
+        //}
     });
 
     let mut builder = bindgen::Builder::default()
